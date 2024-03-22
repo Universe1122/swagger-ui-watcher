@@ -154,4 +154,11 @@ module.exports = {
 };
 
 
-start("C:\\Users\\whdal\\Downloads\\test2.json", "C:\\Users\\whdal\\Downloads", 8000, "127.0.0.1", true, {}, undefined)
+if (process.argv[2] == undefined){
+  console.error("input openapi spec path");
+}
+else{
+  let targetFile = process.argv[2];
+  let targetDirValue = path.dirname(process.argv[2]);
+  start(targetFile, targetDirValue, 8000, "127.0.0.1", true, {}, undefined)
+}
