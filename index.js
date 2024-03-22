@@ -34,7 +34,6 @@ function bundle(swaggerFile, server) {
       break;
     }
   }
-
   var options = {
     filter : ['relative', 'remote'],
     resolveCirculars: true,
@@ -89,7 +88,8 @@ function start(swaggerFile, targetDir, port, hostname, openBrowser, swaggerUIOpt
     socket.on('swaggerReady', function (data) {
       client_server_info = data;
       bundle(swaggerFile, data).then(function (bundled) {
-        socket.emit('updateSpec', JSON.stringify(bundled));
+        const server_list = getServerList(swaggerFile);
+        socket.emit('updateSpec', JSON.stringify(bundled, null, 2), server_list);
       }, function (err) {
         socket.emit('showError', err);
       });
@@ -103,8 +103,9 @@ function start(swaggerFile, targetDir, port, hostname, openBrowser, swaggerUIOpt
   chokidar.watch(targetDir, {ignored: watchIgnore}).on('change', function(eventType, name) {
     bundle(swaggerFile, client_server_info).then(function (bundled) {
       console.log("File changed. Sent updated spec to the browser.");
+      const server_list = getServerList(swaggerFile);
       var bundleString = JSON.stringify(bundled, null, 2);
-      io.sockets.emit('updateSpec', bundleString);
+      io.sockets.emit('updateSpec', bundleString, server_list);
     }, function (err) {
       io.sockets.emit('showError', err);
     });

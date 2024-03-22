@@ -6,56 +6,36 @@
   <title>Swagger Editor</title>
   <style>
     * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: Roboto,sans-serif;
-      font-size: 9px;
-      line-height: 1.42857143;
-      color: #444;
-      margin: 0px;
-    }
+    box-sizing: border-box;
+  }
+  body {
+    font-family: Roboto,sans-serif;
+    font-size: 9px;
+    line-height: 1.42857143;
+    color: #444;
+    margin: 0px;
+  }
 
-    #swagger-editor {
-      font-size: 1.3em;
-    }
+  #swagger-editor {
+    font-size: 1.3em;
+  }
 
-    #swagger-editor .editor-wrapper #ace-editor {
-      height: 100% !important;
-    }
+  .container {
+    height: 100%;
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 
-    #errors-container {
-      color: red;
-      background: #fff;
-      position: absolute;
-      top: 0;
-      margin:0;
-      padding: 10px;
-      width: 100%;
-      display: none;
-    }
+  #editor-wrapper {
+    height: 100%;
+    border:1em solid #000;
+    border:none;
+  }
 
-    .container {
-      height: 100%;
-      max-width: 880px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    #editor-wrapper {
-      height: 100%;
-      border:1em solid #000;
-      border:none;
-    }
-
-    .Pane2 {
-      overflow-y: scroll;
-      width: 100% !important;
-    }
-
-    #swagger-editor .container .SplitPane {
-      height: 100% !important;
-    }
+  .Pane2 {
+    overflow-y: scroll;
+  }
 
     #server{
       font-size: 17px;
@@ -69,13 +49,9 @@
 </head>
 
 <body>
-  <input type="hidden" id="server" value="<%=server_list[0] %>">
-  <div id="server">
-    <h2>server list</h2>
-    <% for(const server of server_list){ %>
-      <a href="javascript:test('<%=encodeURIComponent(server)%>')"><%=server%></a><br>
-    <%  } %>
-  </div>
+  <% for(const server of server_list){ %>
+    <input type="hidden" class="server" value="<%=server %>">
+  <%  } %>
 <div id="swagger-editor"></div>
 <script src="/swagger-editor-bundle.js"></script>
 <script src="/swagger-editor-standalone-preset.js"></script>
@@ -85,7 +61,7 @@
   window.onload = function() {
     // Build a system
     var editor;
-    var server = document.getElementById("server").value;
+    var server = document.getElementsByClassName("server")[0].value;
     socket = io.connect("http://127.0.0.1:8000");
     var errorsContainer = document.getElementById('errors-container');
     var errors = document.getElementById('errors');
@@ -94,14 +70,15 @@
     socket.once('swaggerOptions', function (options) {
       editor = SwaggerEditorBundle({
         dom_id: "#swagger-editor",
-        layout: "EditorLayout",
-        presets: [SwaggerEditorStandalonePreset],
-        ...options,
+        layout: "StandaloneLayout",
+        presets: [SwaggerEditorStandalonePreset]
       });
 
       window.editor = editor;
 
-      socket.on('updateSpec', function(data) {
+      socket.on('updateSpec', function(data, server_list) {
+        console.log(server_list);
+        createHostMenu(server_list);
         console.log(new Date().toString() + 'Updating Spec...');
         var scrollElement = document.getElementsByClassName('Pane2')[0];
         var tempScrollTop = scrollElement ? scrollElement.scrollTop : 0;
@@ -125,10 +102,71 @@
     });
 
     socket.emit('uiReady', {});
+
+    setTimeout(() => {
+      const server_list = document.getElementsByClassName("server")
+      createHostMenu(server_list)
+    }, 1500)
+
   };
   function test(server){
-      socket.emit('swaggerReady', server);
+    socket.emit('swaggerReady', server);
+  }
+
+  function createHostMenu(server_list) {
+    const find_elem = document.getElementsByClassName("custom-menu");
+    if(find_elem.length != 0){
+      find_elem[0].remove()
     }
+    const menu_bar = document.getElementsByClassName("topbar-wrapper");
+    const div = document.createElement("div");
+    
+    div.className = "dd-menu dd-menu-left long custom-menu";
+    const span = document.createElement("span");
+    span.className = "menu-item";
+    span.innerHTML = "Host";
+    const sub_div = document.createElement("div");
+    sub_div.className = "dd-menu-items";
+    sub_div.style.display = "none";
+    const ul = document.createElement("ul");
+    ul.className = "dd-items-left";
+    
+    for(const _server of server_list){
+      const li = document.createElement("li");
+      // li.onlick = function() {
+      //   test(_server.value);
+      // }
+      const button = document.createElement("button");
+      button.type = "button";
+      if(_server.value == undefined){
+        button.innerHTML = _server;
+        button.addEventListener("click", () => {
+          test(_server);
+        })
+      }
+      else {
+        button.innerHTML = _server.value;
+          button.addEventListener("click", () => {
+          test(_server.value);
+        })
+      }
+      li.appendChild(button)
+      ul.appendChild(li);
+    }
+
+    sub_div.appendChild(ul);
+    div.appendChild(span);
+    div.appendChild(sub_div);
+    div.addEventListener("click", () => {
+        if(sub_div.style.display == ""){
+          sub_div.style.display = "none";
+        }
+        else {
+          sub_div.style.display = "";
+        }
+    })
+    menu_bar[0].appendChild(div);
+  }
 </script>
 
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position:absolute;width:0;height:0">
