@@ -59,9 +59,10 @@
 <script>
   var socket;
   var current_server;
+  var editor;
   window.onload = function() {
     // Build a system
-    var editor;
+  
     var server = document.getElementsByClassName("server")[0].value;
     var current_server = server;
     socket = io.connect("http://127.0.0.1:8000");
@@ -110,8 +111,9 @@
       // Check if Ctrl and S keys are pressed
       if (event.ctrlKey && event.key === 's') {
           event.preventDefault(); // Prevent default browser behavior (saving the page)
-          const data = JSON.parse(document.querySelector("#ace-editor > div.ace_scroller > div").innerText.replace(/\n/g, ""))
-          socket.emit("save", current_server, data);
+          const jsonValue = JSON.parse(editor.specSelectors.specStr(editor.getState()).replace(/\n/g, ''))
+          // console.log(jsonValue);
+          socket.emit("save", current_server, jsonValue);
       }
     });
 
