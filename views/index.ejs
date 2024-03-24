@@ -58,10 +58,12 @@
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
 <script>
   var socket;
+  var current_server;
   window.onload = function() {
     // Build a system
     var editor;
     var server = document.getElementsByClassName("server")[0].value;
+    var current_server = server;
     socket = io.connect("http://127.0.0.1:8000");
     var errorsContainer = document.getElementById('errors-container');
     var errors = document.getElementById('errors');
@@ -98,10 +100,20 @@
         console.log(data);
         errors.innerHTML = data;
       });
+      console.log("swaggerReady: ", server)
       socket.emit('swaggerReady', server);
     });
 
     socket.emit('uiReady', {});
+
+    document.addEventListener('keydown', function(event) {
+      // Check if Ctrl and S keys are pressed
+      if (event.ctrlKey && event.key === 's') {
+          event.preventDefault(); // Prevent default browser behavior (saving the page)
+          const data = JSON.parse(document.querySelector("#ace-editor > div.ace_scroller > div").innerText.replace(/\n/g, ""))
+          socket.emit("save", current_server, data);
+      }
+    });
 
     setTimeout(() => {
       const server_list = document.getElementsByClassName("server")
@@ -109,7 +121,7 @@
     }, 1500)
 
   };
-  function test(server){
+  function getServerInfo(server){
     socket.emit('swaggerReady', server);
   }
 
@@ -133,21 +145,20 @@
     
     for(const _server of server_list){
       const li = document.createElement("li");
-      // li.onlick = function() {
-      //   test(_server.value);
-      // }
       const button = document.createElement("button");
       button.type = "button";
       if(_server.value == undefined){
         button.innerHTML = _server;
         button.addEventListener("click", () => {
-          test(_server);
+          getServerInfo(_server);
+          current_server = _server;
         })
       }
       else {
         button.innerHTML = _server.value;
           button.addEventListener("click", () => {
-          test(_server.value);
+            getServerInfo(_server.value);
+            current_server = _server.value;
         })
       }
       li.appendChild(button)
@@ -158,12 +169,12 @@
     div.appendChild(span);
     div.appendChild(sub_div);
     div.addEventListener("click", () => {
-        if(sub_div.style.display == ""){
-          sub_div.style.display = "none";
-        }
-        else {
-          sub_div.style.display = "";
-        }
+      if(sub_div.style.display == ""){
+        sub_div.style.display = "none";
+      }
+      else {
+        sub_div.style.display = "";
+      }
     })
     menu_bar[0].appendChild(div);
   }

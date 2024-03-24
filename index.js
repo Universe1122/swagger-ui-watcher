@@ -12,7 +12,7 @@ var io = require('socket.io')(server);
 var chokidar = require('chokidar');
 var JsonRefs = require('json-refs');
 var yaml = require('js-yaml');
-var client_server_info = '';
+global.client_server_info = '';
 
 app.set('view engine', 'ejs');
 
@@ -28,12 +28,18 @@ function bundle(swaggerFile, server) {
   var root = yaml.safeLoad(fs.readFileSync(swaggerFile, 'utf8'));
   var data;
 
-  for(const info of root) {
-    if(info["host"] == server){
-      data = info["openapi"];
-      break;
+  if(server != ""){
+    for(const info of root) {
+      if(info["host"] == server){
+        data = info["openapi"];
+        break;
+      }
     }
   }
+  else{
+    data = root;
+  }
+
   var options = {
     filter : ['relative', 'remote'],
     resolveCirculars: true,
@@ -86,7 +92,8 @@ function start(swaggerFile, targetDir, port, hostname, openBrowser, swaggerUIOpt
 
   io.on('connection', function(socket) {
     socket.on('swaggerReady', function (data) {
-      client_server_info = data;
+      global.client_server_info = data;
+      console.log("swaggerReady: ", global.client_server_info);
       bundle(swaggerFile, data).then(function (bundled) {
         const server_list = getServerList(swaggerFile);
         socket.emit('updateSpec', JSON.stringify(bundled, null, 2), server_list);
@@ -98,10 +105,35 @@ function start(swaggerFile, targetDir, port, hostname, openBrowser, swaggerUIOpt
       console.log("uiReady");
       socket.emit('swaggerOptions', swaggerUIOptions);
     });
+    socket.on("save", function (host, json_data) {
+      console.log(host);
+      console.log(json_data);
+
+      bundle(swaggerFile, "").then(function (bundled) {
+        console.log(bundled);
+        for(const index in bundled) {
+          console.log(bundled[index]["host"],host);
+          if(bundled[index]["host"] == host){
+            console.log("found")
+            bundled[index]["openapi"] = json_data;
+            console.log(JSON.stringify(bundled));
+            global.client_server_info = host;
+            fs.writeFileSync(swaggerFile, JSON.stringify(bundled))
+            // console.log(path.join(swaggerFile))
+            console.log("save done");
+            break;
+          }
+        }
+      }, function (err) {
+        socket.emit('showError', err);
+      });
+    })
   });
 
   chokidar.watch(targetDir, {ignored: watchIgnore}).on('change', function(eventType, name) {
-    bundle(swaggerFile, client_server_info).then(function (bundled) {
+    console.log("client_server_info: ", global.client_server_info)
+    bundle(swaggerFile, global.client_server_info).then(function (bundled) {
+    
       console.log("File changed. Sent updated spec to the browser.");
       const server_list = getServerList(swaggerFile);
       var bundleString = JSON.stringify(bundled, null, 2);
